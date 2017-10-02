@@ -1,3 +1,8 @@
+tree:
+    resource: "@TreeBundle/Controller/"
+    type:     annotation
+    prefix:   /
+
 app:
     resource: '@AppBundle/Controller/'
     type: annotation
