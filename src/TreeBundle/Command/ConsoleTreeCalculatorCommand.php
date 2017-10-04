@@ -2,14 +2,14 @@
 
 namespace TreeBundle\Command;
 
-use AppBundle\Tree\Exception\LeafParseValidationException;
-use AppBundle\Tree\LeafBuilder;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\Question;
 use TreeBundle\Command\Exception\InvalidArgumentException;
 use TreeBundle\Command\Exception\InvalidCommandException;
+use TreeBundle\TreeCalculator\Exception\LeafNotExistException;
+use TreeBundle\TreeCalculator\TreeCalculator;
 
 class ConsoleTreeCalculatorCommand extends Command
 {
@@ -43,8 +43,9 @@ class ConsoleTreeCalculatorCommand extends Command
     {
         $output->writeln('Welcome!');
         $inProgress = true;
-        $treeList = [];
-        $sumCache = [];
+
+        $calculator = new TreeCalculator();
+
         do {
             try {
                 $userCommand = $this->analyzeUserInput($input, $output);
@@ -61,7 +62,7 @@ class ConsoleTreeCalculatorCommand extends Command
             if ($command === self::CREATE_COMMAND) {
 
                 $name = $args[0];
-                $treeList[$name] = '';
+                $calculator->createTree($name);
                 $output->writeln('Leaf ' . '<info>' . $name . '</info>' . ' is created');
 
             } else if ($command === self::ADD_LEVEL_COMMAND) {
@@ -69,46 +70,23 @@ class ConsoleTreeCalculatorCommand extends Command
                 $name = $args[0];
                 $level = $args[1];
 
-                //First set must have only 1 leaf
-                if (!array_key_exists($name, $treeList)) {
-                    $output->writeln('You must create a leaf first');
+                try {
+                    $calculator->addLevel($name, $level);
+                } catch (LeafNotExistException $e) {
+                    $output->writeln($e->getMessage());
                     continue;
                 }
 
-                $delim = '';
-                if ($treeList[$name] !== '') {
-                    $delim = ';';
-                }
-                $treeList[$name] .= $delim . $level;
-
-                //Invalidate cache
-                if (array_key_exists($name, $sumCache)) {
-                    unset($sumCache[$name]);
-                }
-
-                $output->writeln($name . ' configuration now is: ' . $treeList[$name]);
+                $output->writeln($name . ' configuration now is: ' . $calculator->printTree($name));
 
             } else if ($command === self::SUM_LEAF) {
-
                 $name = $args[0];
-
-                $leafBuilder = new LeafBuilder();
-                $leaf = null;
                 try {
-                    $leaf = $leafBuilder->buildTree($treeList[$name]);
-                } catch (LeafParseValidationException $e) {
-                    $output->writeln($e->getMessage() . ', add level again');
-                    $treeList[$name] = '';
-                }
-                if ($leaf !== null) {
-                    // Check sum cache
-                    if (!array_key_exists($name, $sumCache)) {
-                        $sumCache[$name] = $leaf->findMaxSum();
-                    }
-                    $maxSum = $sumCache[$name];
+                    $maxSum = $calculator->calculateMaxSum($name);
                     $output->writeln('Max sum is: ' . $maxSum);
+                } catch (LeafNotExistException $e) {
+                    $output->writeln($e->getMessage());
                 }
-
             } else if ($command === self::STOP) {
                 $inProgress = false;
                 $output->writeln('Goodbye...');
