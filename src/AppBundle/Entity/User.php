@@ -2,15 +2,16 @@
 
 
 namespace AppBundle\Entity;
+use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 
 
 /**
  * @ORM\Entity()
- * @ORM\Table(name="user")
+ * @ORM\Table(name="appuser")
  */
-class User implements ValidEntity
+class User extends EntityRepository implements ValidEntity
 {
     /**
      * @ORM\Column(type="integer")
